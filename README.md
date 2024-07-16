@@ -6,3 +6,4 @@ depth: [   0    0    0    0    0    0  ...  2628, 2639, 2639, 2650, 2650, 2662] 
 
 rgb: [[ 97 124  70] [ 97 124  70] [ 94 123  69]  ...  [ 51  79  41] [ 52  80  42] [ 51  79  41]]
 
+![rgbdrecon](https://github.com/user-attachments/assets/9c77b762-085a-4c21-90dd-fbb8f23bad20)
