@@ -15,7 +15,7 @@ git clone https://github.com/jasonqiuwo/SavePubData.git
 colcon build --symlink-install 
 ```
 
-The file format used for logging camera data is .h5 files, which organizes the saved data in a hierarchical structure. This method allows for easy loading and integration into ROS2 nodes, where the data can be subscribed to and visualized in Rviz2. Below is an example of how frames can be saved in this format:
+The file format used for logging camera data is .h5 files, which organizes the saved data in a hierarchical structure. This method allows for easy loading and integration into ROS2 nodes, where the data can be subscribed to and visualized in Rviz2. Below is an example of how frames can be saved in this format, and this could be read by using read_h5.py:
 
 ```
 depth: [0,  0,  0,  0,  0,  0
