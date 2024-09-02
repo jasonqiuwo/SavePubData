@@ -11,32 +11,22 @@ class ScanFusion(Node):
     def __init__(self):
         super().__init__('scan_fusion')
         self.scan_sub = self.create_subscription(LaserScan, 'scan', self.scan_callback, 10)
-        self.encoder_sub = self.create_subscription(Int32, 'degrees', self.encoder_callback, 10)
+        self.encoder_sub = self.create_subscription(Int32, 'degree', self.encoder_callback, 10)
         self.pc_pub = self.create_publisher(PointCloud2, 'pointcloud', 10)
         
-        self.encoder_buffer = deque(maxlen=200)  # Buffer to store encoder values (assumes 2s worth of data)
-        self.scan_count = 0  # Counter to track the number of scans processed
+        self.encoder_buffer = deque(maxlen=100)  # Buffer to store encoder values (assumes 2s worth of data)
+        self.last_published_time = None  # Track last time a point cloud was published        
+        
         
     def encoder_callback(self, msg):
         timestamp = time()
         self.encoder_buffer.append((timestamp, msg.data))
+        
 
     def get_interpolated_angle(self, scan_time):
         if len(self.encoder_buffer) < 1:
             self.get_logger().warn('No encoder data available yet, skipping scan fusion.')
-            return None  # Return None if there is no encoder data
-        
-        if len(self.encoder_buffer) == 1:
-            return self.encoder_buffer[-1][1]  # Only one entry, return the latest value
-        
-        for i in range(len(self.encoder_buffer) - 1):
-            t1, angle1 = self.encoder_buffer[i]
-            t2, angle2 = self.encoder_buffer[i + 1]
-            if t1 <= scan_time <= t2:
-                # Linear interpolation between t1 and t2
-                ratio = (scan_time - t1) / (t2 - t1)
-                return angle1 + ratio * (angle2 - angle1)
-        
+            return None  # Return None if there is no encoder data       
         return self.encoder_buffer[-1][1]  # Fallback in case no exact match
 
     def scan_callback(self, msg):
@@ -46,6 +36,12 @@ class ScanFusion(Node):
         if current_angle is None:
             return  # Skip processing if no encoder data is available
 
+        if self.last_published_time is not None and abs(current_angle - self.last_published_time) < 0.01:
+            self.get_logger().warn('Duplicate scan detected, skipping this publish.')
+            return  # Skip if it's a duplicate scan
+
+        self.last_published_time = current_angle 
+        
         # Convert the current angle to radians and invert it to align scans back to 0 degrees
         current_angle_rad = np.radians(-current_angle)
         
@@ -70,11 +66,8 @@ class ScanFusion(Node):
         header.frame_id = 'cloud'  # or the appropriate frame_id
         pointcloud_msg = create_cloud_xyz32(header, points)
         self.pc_pub.publish(pointcloud_msg)
-        
-        self.scan_count += 1
-        if self.scan_count % 4 == 0:
-            # Print success message every 4 scans
-            self.get_logger().info('Fusion successful: Published point cloud with %d points' % len(points))
+        self.get_logger().info('Fusion successful: Published point cloud at time %d' % current_angle)
+            
 
 def main(args=None):
     rclpy.init(args=args)
